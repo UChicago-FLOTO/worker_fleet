@@ -1,0 +1,24 @@
+ARG OS_RELEASE
+ARG OS_DATE
+
+FROM balenalib/%%BALENA_ARCH%%-ubuntu:${OS_RELEASE}-build-${OS_DATE} as build
+
+ARG K3S_VERSION
+
+RUN curl -sSfL -o /usr/local/bin/k3s \
+    "https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s-arm64" \
+    && chmod +x /usr/local/bin/k3s
+
+FROM balenalib/%%BALENA_ARCH%%-ubuntu:${OS_RELEASE}-build-${OS_DATE} as tailscale
+WORKDIR /app
+
+FROM balenalib/%%BALENA_ARCH%%-ubuntu:${OS_RELEASE}-run-${OS_DATE} as run
+COPY --from=build /usr/local/bin/k3s /usr/local/bin/k3s
+
+RUN install_packages \
+    iptables \
+    wireguard-tools
+
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+CMD ["/usr/local/bin/entrypoint.sh"]

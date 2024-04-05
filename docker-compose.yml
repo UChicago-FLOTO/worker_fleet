@@ -1,0 +1,23 @@
+---
+version: "2.4"
+services:
+  k3s:
+    build:
+      context: ./k3s
+      args:
+        K3S_VERSION: "v1.27.9+k3s1"
+        OS_RELEASE: "focal"
+        OS_DATE: "20220320"
+    privileged: true
+    network_mode: "host"
+    labels:
+      io.balena.features.kernel-modules: "1"
+    tmpfs:
+      - /run
+      - /var/run
+    volumes:
+      - k3s_datadir:/var/lib/rancher/k3s
+      - k3s_node_dir:/etc/rancher
+volumes:
+  k3s_datadir: {}
+  k3s_node_dir: {}
