@@ -18,6 +18,24 @@ services:
     volumes:
       - k3s_datadir:/var/lib/rancher/k3s
       - k3s_node_dir:/etc/rancher
+  balena-mdns-publisher:
+    image: flungo/avahi
+    cap_add:
+        - SYS_RESOURCE
+        - SYS_ADMIN
+    security_opt:
+        - 'apparmor:unconfined'
+    tmpfs:
+        - /run
+        - /sys/fs/cgroup
+    environment:
+        SERVER_HOST_NAME: floto
+        SERVER_ALLOW_INTERFACES: eth0
+        DBUS_SESSION_BUS_ADDRESS: 'unix:path=/host/run/dbus/system_bus_socket'
+    privileged: true
+    network_mode: host
+    labels:
+        io.balena.features.dbus: '1'
 volumes:
   k3s_datadir: {}
   k3s_node_dir: {}
