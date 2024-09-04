@@ -17,7 +17,8 @@ COPY --from=build /usr/local/bin/k3s /usr/local/bin/k3s
 
 RUN install_packages \
     iptables \
-    wireguard-tools
+    wireguard-tools \
+    dnsutils
 
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -2,48 +2,33 @@
 
 set -x
 
-################### IP AUTO DETECTION ##################################################
+# Function to resolve CNAME using nslookup
+resolve_cname() {
+    local cname="$1"
+    local resolved_addresses=$(nslookup -type=A "${cname}" | awk '/^Address: / { print $2 }')
+    echo "${resolved_addresses}"
+}
 
-# Retrieve the interface name associated with the default route
-interface_name=$(ip route show default | awk '/default/ {print $5}')
+# Resolve CNAME k3s.floto.science to get IP addresses
+RESOLVED_ADDRESSES=$(resolve_cname "k3s.floto.science")
 
-if [ -z "$interface_name" ]; then
-    echo "Error: Unable to determine the default interface."
+# Check if any addresses were resolved
+if [ -z "${RESOLVED_ADDRESSES}" ]; then
+    echo "Error: No addresses resolved for k3s.floto.science"
     exit 1
 fi
 
-# Retrieve the first IPv4 address assigned to the determined network interface
-ipv4_address=$(ip -4 addr show dev "$interface_name" | awk '/inet / {print $2; exit}')
+# Convert resolved addresses to an array
+IFS=$'\n' read -rd '' -a ADDR <<< "${RESOLVED_ADDRESSES}"
 
-# Remove the prefix bits from the IPv4 address
-ipv4_address=$(echo "$ipv4_address" | cut -d'/' -f1)
+# Select a random address
+RANDOM_INDEX=$((RANDOM % ${#ADDR[@]}))
+RANDOM_ADDRESS="${ADDR[RANDOM_INDEX]}"
 
-# Retrieve the first IPv6 address assigned to the determined network interface
-ipv6_address=$(ip -6 addr show dev "$interface_name" | awk '/inet6 / {print $2; exit}')
+SERVER_URL="https://${RANDOM_ADDRESS}:6443"
 
-# Remove the prefix bits from the IPv6 address
-ipv6_address=$(echo "$ipv6_address" | cut -d'/' -f1)
-
-# Fail if no IPv4 address is found
-if [ -z "$ipv4_address" ]; then
-    echo "Error: No IPv4 address found for interface $interface_name."
-    exit 1
-fi
-
-# If no IPv6 address is found, assign a dummy one
-if [ -z "$ipv6_address" ]; then
-    ipv6_address="fe80::1" # Assign a dummy IPv6 address
-fi
-
-echo "Detected IPv4 address for $interface_name: $ipv4_address"
-echo "Detected IPv6 address for $interface_name: $ipv6_address"
-
-
-#########################################################################################
-
-# start k3s agent using tailscale
 k3s agent \
     --node-name=${BALENA_DEVICE_UUID} \
-    --node-ip=${ipv4_address},${ipv6_address}          
+    --server=${SERVER_URL}
 
 set +x
